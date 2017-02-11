@@ -12,6 +12,10 @@
 #include <RobotDrive.h>
 #include <Timer.h>
 
+//#define LOWGEAR
+//#define HIGHGEAR
+//#define TICKS
+
 /**
  * This is a demo program showing the use of the RobotDrive class.
  * The SampleRobot class is the base of a robot application that will
@@ -26,8 +30,7 @@
  */
 class Robot: public frc::SampleRobot {
 	frc::VictorSP *rightFront, *rightBack, *rightTop, *leftFront, *leftBack, *leftTop;
-	//frc::VictorSP *shooterMotor, *agitatorMotor, *indexerMotor, intakeMotor;
-	frc::VictorSP *intakeMotor, *shooterMotor, *indexerMotor;
+	frc::VictorSP *intakeMotor, *shooterMotor, *indexerMotor, *agitatorMotor;
 	frc::Joystick *controller;
 	frc::RobotDrive *sigmaDrive, *boostDrive;
 	frc::DoubleSolenoid *sigmaShifter;
@@ -61,6 +64,25 @@ public:
 		sigmaShifter->Set(DoubleSolenoid::kReverse);
 	}
 	/*
+	*This is the start of an algorithm that you enter the distance, speed, and gear
+	* and the robot moves for auto
+	void SigmaDrive(bool LOWGEAR, int speed, double distance)
+	{
+		if(LOWGEAR == true)
+		{
+			//Lowgear * distance;
+		}
+		else
+		{
+			//Highgear * distance;
+		}
+		// double Encdistance = distance * TICKS;
+		double pwmSpeed = speed/100;
+		sigmaDrive->TankDrive(pwmSpeed, pwmSpeed);
+		boostDrive->TankDrive(pwmSpeed, pwmSpeed);
+	}
+	*/
+	/*
 	 * This autonomous (along with the chooser code above) shows how to select
 	 * between different autonomous modes using the dashboard. The sendable
 	 * chooser code works with the Java SmartDashboard. If you prefer the
@@ -90,18 +112,19 @@ public:
 			SmartDashboard->PutNumber("rightValue: ",rightValue);
 						//Buttons
 			double A = (controller->GetRawButton(1));
-			//double X = (controller->GetRawButton(3));
+			double X = (controller->GetRawButton(3));
 			//double LT = (controller->GetRawAxis(2));
-			//double RB = (controller->GetRawButton(6));
-			//double LB = (controller->GetRawButton(5));
+			double RB = (controller->GetRawButton(6));
+			double LB = (controller->GetRawButton(5));
 			//int state = 0;
+			//double RT = (controller->GetRawButton());
 			sigmaDrive->TankDrive(leftValue, rightValue);
 			boostDrive->TankDrive(leftValue, rightValue);
 			/*
 			 * The following code needed to change gears
 			 * Not Subject to change
 			 */
-			/*
+
 			if(LB)
 			{
 				intakeMotor->Set(-.98);
@@ -110,38 +133,49 @@ public:
 			{
 				intakeMotor->Set(.98);
 			}
-			else if(A)
+			else if(X)
 			{
-				shooterMotor->Set(.60);
+				shooterMotor->Set(.55);
 				Wait(2);
-				indexerMotor->Set(.70);
+				indexerMotor->Set(.55);
+				agitatorMotor->Set(.25);
+				intakeMotor->Set(-.98);
 			}
 			else
 			{
 				intakeMotor->Set(0.0);
 				shooterMotor->Set(0.0);
 				indexerMotor->Set(0.0);
+				agitatorMotor->Set(0.0);
 			}
-			*/
 
-			if(A)
+
+
+			/*
+			if(X)
 			{
 				shooterMotor->Set(.55);
 				Wait(2);
 				indexerMotor->Set(.55);
+				agitatorMotor->Set(.25);
+				intakeMotor->Set(-.98);
 			}
 			else
 			{
 				shooterMotor->Set(0.0);
 				indexerMotor->Set(0.0);
 			}
-
+			*/
 			/*
+			 * if(RT >= 0.9)
+			 * {
+			 *
+			 * }
 			if(LT >= 0.1)
 			{
 				LowGear();
 			}
-			elsekr
+			else
 			{
 				HighGear();
 			}
