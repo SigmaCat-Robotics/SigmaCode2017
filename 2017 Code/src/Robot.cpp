@@ -2,6 +2,8 @@
 #include <memory>
 #include <string>
 
+#include <Encoder.h>
+#include <ADXRS450_Gyro.h>
 #include <CameraServer.h>
 #include <VictorSP.h>
 #include <DoubleSolenoid.h>
@@ -12,10 +14,11 @@
 #include <RobotDrive.h>
 #include <Timer.h>
 
-//#define LOWGEAR
-//#define HIGHGEAR
-//#define TICKS
-
+#define FORWARD 1
+#define BACKWARD -1
+#define ENCODERTICKSPERFOOT
+#define LOWGEAR 1
+#define HIGHGEAR -1
 /**
  * This is a demo program showing the use of the RobotDrive class.
  * The SampleRobot class is the base of a robot application that will
@@ -30,11 +33,13 @@
  */
 class Robot: public frc::SampleRobot {
 	frc::VictorSP *rightFront, *rightBack, *rightTop, *leftFront, *leftBack, *leftTop;
-	frc::VictorSP *intakeMotor, *shooterMotor, *indexerMotor, *agitatorMotor;
+	frc::VictorSP *intakeMotor, *shooterMotor, *indexerMotor, *agitatorMotor, *climberMotor;
 	frc::Joystick *controller;
 	frc::RobotDrive *sigmaDrive, *boostDrive;
 	frc::DoubleSolenoid *sigmaShifter;
 	frc::SmartDashboard *SmartDashboard;
+	frc::ADXRS450_Gyro *gyro;
+	frc::Encoder *rightEncoder, *leftEncoder;
 public:
 
 	void RobotInit() {
@@ -43,15 +48,18 @@ public:
 		rightTop = new VictorSP(9);     // Motor w/ Brown sticker
 		leftFront = new VictorSP(0);    // Motor w/ Green sticker
 		leftBack = new VictorSP(0);     // Motor w/ Red sticker
-		leftTop = new VictorSP(0);      //  Motor w/ White sticker
-		intakeMotor = new VictorSP(4);  //Motor w/ yellow sticker
-		shooterMotor = new VictorSP(5);  //Motor w/ blue sticker
-		//agitatorMotor = new VictorSP(); // Motor w/
+		leftTop = new VictorSP(0);      // Motor w/ White sticker
+		intakeMotor = new VictorSP(4);  // Motor w/ purple orange sticker
+		shooterMotor = new VictorSP(5); // Motor w/ blue sticker
+		agitatorMotor = new VictorSP(1); // Motor w/ yellow green sticker
 		indexerMotor = new VictorSP(3);  // Motor w/ Orange sticker
+		//climberMotor = new VictorSP()//Motor w/yellow sticker
 		controller = new Joystick(0);
 		sigmaDrive = new RobotDrive(rightFront, rightBack, leftFront, leftBack);
 		boostDrive = new RobotDrive(rightTop, leftTop);
-		CameraServer::GetInstance()->StartAutomaticCapture();
+	//	rightEncoder new Encoder;
+	//	leftEncoder = new Encoder;
+	//	CameraServer::GetInstance()->StartAutomaticCapture();
 		//sigmaShifter = new DoubleSolenoid(0,1);
 
 	}
@@ -63,25 +71,64 @@ public:
 	{
 		sigmaShifter->Set(DoubleSolenoid::kReverse);
 	}
-	/*
-	*This is the start of an algorithm that you enter the distance, speed, and gear
-	* and the robot moves for auto
-	void SigmaDrive(bool LOWGEAR, int speed, double distance)
+/*
+	//This is an algorithm that you enter the direction, distance, speed.
+	void SigmaDrive(int direction, int gear, double distance, double speed)
 	{
-		if(LOWGEAR == true)
+		rightEncoder->Reset();
+		leftEncoder->Reset();
+		if(gear == LOWGEAR)
 		{
-			//Lowgear * distance;
+			LowGear();
+		}
+		if(gear == HIGHGEAR)
+		{
+			HighGear();
+		}
+		double destination = distance * ENCODERTICKSPERFOOT * direction *gear;
+		if(destination > 0)//Forward
+		{
+			while(rightEncoder->Get() <= destination && leftEncoder->Get() <= destination )
+			{
+				std::cout << "Right Encoder: " << rightEncoder->Get() << std::endl;
+				std::cout << "Left Encoder: " << leftEncoder->Get() << std::endl;
+				sigmaDrive->TankDrive(speed, speed);
+			}
+		}
+		else//Backward
+		{
+			while(rightEncoder->Get() <= destination && leftEncoder->Get() <= destination)
+			{
+				std::cout << "Right Encoder: " << rightEncoder->Get() << std::endl;
+				std::cout << "Left Encoder: " << leftEncoder->Get() << std::endl;
+				sigmaDrive->TankDrive(-speed, -speed);
+			}
+
+		}
+	}
+*/
+/*
+	*This is the start of an algorithm that you enter the degrees
+	void Gyro(int n)
+	{
+		if(n > 0)
+		{
+			while(gyro->GetAngle() <= n)
+			{
+				std::cout << "Angle: " << gyro->GetAngle() << std::endl;
+				sigmaDrive->TankDrive(0.7,-0.7);
+			}
 		}
 		else
 		{
-			//Highgear * distance;
+			while(gyro->GetAngle() >= n)
+			{
+				std::cout << "Angle: " << gyro->GetAngle() << std::endl;
+				sigmaDrive->TankDrive(-0.7,0.7);
+			}
 		}
-		// double Encdistance = distance * TICKS;
-		double pwmSpeed = speed/100;
-		sigmaDrive->TankDrive(pwmSpeed, pwmSpeed);
-		boostDrive->TankDrive(pwmSpeed, pwmSpeed);
 	}
-	*/
+*/
 	/*
 	 * This autonomous (along with the chooser code above) shows how to select
 	 * between different autonomous modes using the dashboard. The sendable
@@ -95,6 +142,8 @@ public:
 	 */
 	void Autonomous()
 	{
+
+
 		//Enter code here
 	}
 
@@ -102,7 +151,9 @@ public:
 	 * Runs the motors with arcade steering.
 	 */
 	void OperatorControl() override {
-		//myRobot.SetSafetyEnabled(true);
+//		sigmaDrive.SetSafetyEnabled(true);
+		int firstTimeInX = 1;
+
 		while (IsOperatorControl() && IsEnabled())
 		{
 			double leftValue = (-1 * controller->GetRawAxis(5));
@@ -116,8 +167,7 @@ public:
 			//double LT = (controller->GetRawAxis(2));
 			double RB = (controller->GetRawButton(6));
 			double LB = (controller->GetRawButton(5));
-			//int state = 0;
-			//double RT = (controller->GetRawButton());
+			double RT = (controller->GetRawAxis(3));
 			sigmaDrive->TankDrive(leftValue, rightValue);
 			boostDrive->TankDrive(leftValue, rightValue);
 			/*
@@ -127,19 +177,31 @@ public:
 
 			if(LB)
 			{
-				intakeMotor->Set(-.98);
+				intakeMotor->Set(-0.98);
+				std::cout <<"LB!" << std::endl;
+				frc::Wait(.001);
+				firstTimeInX = 1;
 			}
 			else if(RB)
 			{
-				intakeMotor->Set(.98);
+				intakeMotor->Set(0.98);
+				std::cout <<"RB!" << std::endl;
+				frc::Wait(.001);
+				firstTimeInX = 1;
 			}
-			else if(X)
+			else if(RT >= 0.1)
 			{
-				shooterMotor->Set(.55);
-				Wait(2);
-				indexerMotor->Set(.55);
-				agitatorMotor->Set(.25);
-				intakeMotor->Set(-.98);
+				shooterMotor->Set(0.635);
+				if (firstTimeInX == 1)
+				{
+					firstTimeInX = 0;
+					Wait(2);
+				}
+
+				indexerMotor->Set(0.14);
+				agitatorMotor->Set(0.25);
+				intakeMotor->Set(-0.98);
+				std::cout <<"X! -" << std::endl;
 			}
 			else
 			{
@@ -147,25 +209,8 @@ public:
 				shooterMotor->Set(0.0);
 				indexerMotor->Set(0.0);
 				agitatorMotor->Set(0.0);
+				firstTimeInX = 1;
 			}
-
-
-
-			/*
-			if(X)
-			{
-				shooterMotor->Set(.55);
-				Wait(2);
-				indexerMotor->Set(.55);
-				agitatorMotor->Set(.25);
-				intakeMotor->Set(-.98);
-			}
-			else
-			{
-				shooterMotor->Set(0.0);
-				indexerMotor->Set(0.0);
-			}
-			*/
 			/*
 			 * if(RT >= 0.9)
 			 * {
@@ -180,64 +225,8 @@ public:
 				HighGear();
 			}
 			*/
-			/*
-			 * The following is the code needed to run the intake system
-			 * Subject to change
-			 */
-			/*
-			 *
-			if(A)
-			{
-				state = 1;
-			}
-			else if(B)
-			{
-				state = 0;
-			}
-			switch(state)
-			{
-				case 0:
-				{
-				//Set all off
-					shooterMotor->Set(0.0);
-					agitatorMotor->Set(0.0);
-					indexerMotor->Set(0.0);
-					intakeMotor->Set(0.0);
-					SmartDashboard->PutString("Currently in case 0");
-					break;
-				}
-				case 1:
-				{
-				//Starts the shooter motor
-					shooterMotor->Set();
-					Wait(1);
-					SmartDashboard->PutString("Currently in case 1");
-					state = 2;
-					break;
-				}
-				case 2:
-				{
-				//Turns the intake motor and the agitator motor on at the same time and waits to turn on indexter
-					intakeMotor->Set();
-					agitatorMotor->Set();
-					Wait(.002);
-					indexerMotor->Set();
-					SmartDashboard->PutString("Currently in case 2");
-					break;
-				}
-				default:
-				{
-					shooterMotor->Set(0.0);
-					agitatorMotor->Set(0.0);
-					indexerMotor->Set(0.0);
-				}
-			}
-			*/
-
-
-
-			// wait for a motor update time
-			frc::Wait(0.005);
+		// wait for a motor update time
+		//frc::Wait(0.005);
 		}
 }
 	/*
